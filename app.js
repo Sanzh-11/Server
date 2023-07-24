@@ -51,7 +51,7 @@ app.post('/book', (req, res) => {
           db.run(insertRow, [name, surname, IIN, contacts, date], (insertErr) => {
             if (insertErr) {
               console.error(insertErr);
-              res.sendStatus(500);
+              res.sendStatus(404);
             } else {
               console.log(`User ${name} ${surname} booked for ${date}`);
               res.sendStatus(200);
