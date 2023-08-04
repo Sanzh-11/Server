@@ -91,5 +91,3 @@ app.listen(3000, () => {
 process.on('exit', () => {
     db.close();
 });
-
-
