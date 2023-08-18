@@ -7,16 +7,16 @@ const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('database.db');
 
 db.serialize(() => {
-    db.run(`
-        CREATE TABLE IF NOT EXISTS clients (
-            IIN TEXT PRIMARY KEY,
-            name TEXT,
-            surname TEXT,
-            contacts TEXT,
-            date DATETIME,
-            time INT
-        )
-    `);      
+  db.run(`
+      CREATE TABLE IF NOT EXISTS clients (
+          IIN TEXT PRIMARY KEY,
+          name TEXT,
+          surname TEXT,
+          contacts TEXT,
+          date DATETIME,
+          time INT
+      )
+  `);      
 });
 
 const app = express();
@@ -32,7 +32,7 @@ app.post('/book', (req, res) => {
   db.get(selectRow, [IIN], (err, row) => {
     if (err) {
       console.error(err);
-      res.sendStatus(500);
+      res.sendStatus(400);
     } else {
       if (row) {
         const updateRow = `UPDATE clients SET date = ?, time = ? WHERE IIN = ?`;
@@ -40,7 +40,7 @@ app.post('/book', (req, res) => {
         db.run(updateRow, [date, timeInterval, IIN], (updateErr) => {
           if (updateErr) {
             console.error(updateErr);
-            res.sendStatus(500);
+            res.sendStatus(400);
           } else {
             console.log(`User ${name} ${surname}'s date and time interval have been updated to ${date} in ${timeInterval}:00`);
             res.sendStatus(200);
@@ -65,24 +65,43 @@ app.post('/book', (req, res) => {
 
 
 app.get('/check-iin', (req, res) => {
-    const { iin } = req.query;
-    console.log(iin);
-  
-    const selectRow = `SELECT * FROM clients WHERE IIN = ?`;
-  
-    db.get(selectRow, [iin], (err, row) => {
-      if (err) {
-        console.error(err);
-        res.sendStatus(500);
-      } else {
-        if (row) {
-          const { name, surname, IIN, contacts, date } = row;
-          const userInfo = { name, surname, IIN, contacts, date };
-          res.status(200).json(userInfo);
-        } 
-      }
-    });
+  const { iin } = req.query;
+
+  const selectRow = `SELECT * FROM clients WHERE IIN = ?`;
+
+  db.get(selectRow, [iin], (err, row) => {
+    if (err || !row) {
+      console.error(err);
+      res.send(404);
+    } else {
+      const { name, surname, IIN, contacts, date } = row;
+      const userInfo = { name, surname, IIN, contacts, date };
+      res.status(200);
+      res.send(userInfo);
+    }
+  });
 });
+
+const formatDateValue = (dateValue) => dateValue >= 10 ? `${dateValue}` : `0${dateValue}`
+
+app.get('/check-date', (req, res) => {
+  const { date } = req.query;
+  const dateObj = new Date(date);
+  const formattedDate = `${dateObj.getFullYear()}-${formatDateValue(dateObj.getMonth() + 1)}-${formatDateValue(dateObj.getDate())}`
+  const selectRows = `SELECT time FROM clients WHERE date(date) = date("${formattedDate}")`
+  
+  db.all(selectRows, [], (err, rows) => {
+    if(err) {
+      console.log(err);
+      res.sendStatus(400);
+    } else {
+      const bookedTimes = rows.map((row) => row.time);
+      console.log(bookedTimes);
+      res.status(200);
+      res.send(bookedTimes);
+    }
+  })
+})
 
 app.listen(3000, () => {
     console.log(`Example app listening on port 3000`)
