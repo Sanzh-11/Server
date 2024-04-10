@@ -1,5 +1,5 @@
+const emailjs = require("@emailjs/nodejs");
 const process = require("node:process");
-
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -15,6 +15,11 @@ const storage = multer.diskStorage({
     cb(null, file.originalname);
   },
 });
+
+const templateParams = {
+  name: "James",
+  notes: "Check this out!",
+};
 
 const upload = multer({ storage: storage });
 
@@ -90,15 +95,12 @@ app.post("/book", (req, res) => {
 });
 
 app.post("/book-file", upload.single("file"), (req, res) => {
-  console.log(req.body, req.file);
-  const { user, date, timeInterval } = req.body;
-  const { name, surname, IIN, contacts, filePath } = user;
+  console.log(req.body.payload, req.file);
+  const { user, date, timeInterval } = JSON.parse(req.body.payload);
+  const { name, surname, IIN, contacts } = user;
+  const filePath = `http://localhost:3000/${req.file.filename}`;
 
   const selectRow = `SELECT * FROM clients WHERE IIN = ?`;
-  res.json({
-    filePath: `http://localhost:3000/${req.file.filename}`,
-    message: "File uploaded successfully!",
-  });
 
   db.get(selectRow, [IIN], (err, row) => {
     if (err) {
@@ -224,8 +226,16 @@ app.get("/pending-bookings", (req, res) => {
       res.send(404);
     } else {
       rows.map((row) => {
-        const { name, surname, IIN, contacts, date, filePath } = row;
-        const userInfo = { name, surname, IIN, contacts, date, filePath };
+        const { name, surname, IIN, contacts, date, filePath, email } = row;
+        const userInfo = {
+          name,
+          surname,
+          IIN,
+          contacts,
+          date,
+          filePath,
+          email,
+        };
         arr.push(userInfo);
       });
       res.status(200);
@@ -272,18 +282,18 @@ app.post("/upload", upload.single("file"), (req, res) => {
 });
 
 app.get("/add-column", (req, res) => {
-  db.run(
-    `UPDATE clients SET filePath = "http://localhost:3000/IMG_3129.jpg"`,
-    (error) => {
-      if (error) {
-        console.log(error);
-        res.sendStatus(500);
-      } else {
-        console.log("success");
-        res.sendStatus(200);
-      }
-    }
-  );
+  // db.run(
+  //   `UPDATE clients SET filePath = "http://localhost:3000/IMG_3129.jpg"`,
+  //   (error) => {
+  //     if (error) {
+  //       console.log(error);
+  //       res.sendStatus(500);
+  //     } else {
+  //       console.log("success");
+  //       res.sendStatus(200);
+  //     }
+  //   }
+  // );
 });
 
 app.listen(3000, () => {
